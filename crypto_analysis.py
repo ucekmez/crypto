@@ -65,6 +65,46 @@ class Bittrex(object):
             requests.get(self.uri + '/public/getmarkets/'),
             result_only)
     
+    def get_orderbook(self, c='vrm', base='btc', result_only=True):
+        return self.dispatch(
+            requests.get(self.uri + '/public/getorderbook?market={}-{}&type=both'.format(base, c)),
+            result_only)
+    
+    def orderbook_analysis(self, c='vrm', base='btc', sample=10):
+        def get_score(arr):
+            total_diff = 0
+            for i in range(len(arr)-1):
+                slope = abs(1/(arr[i+1] - arr[i]))
+                total_diff += slope
+            return total_diff
+        
+        orderbook = self.get_orderbook(c=c, base=base, result_only=True)
+        
+        total_buy_orders = 0
+        buy_order_list   = []
+        for buy_order in orderbook['buy'][:sample]: # {'Quantity/Size(ETH)': 2.26034925, 'Rate/Bid(BTC)': 0.04627} 
+            quantity           = buy_order['Quantity']
+            bid                = buy_order['Rate']
+            buy_order_in_btc   = quantity * bid
+            total_buy_orders   += buy_order_in_btc
+            buy_order_list.append(total_buy_orders)
+        
+        total_sell_orders = 0
+        sell_order_list   = []
+        for buy_order in orderbook['sell'][:sample]: # {'Quantity/Size(ETH)': 2.26034925, 'Rate/Ask(BTC)': 0.04627} 
+            quantity           = buy_order['Quantity']
+            ask                = buy_order['Rate']
+            sell_order_in_btc  = quantity * ask
+            total_sell_orders  += sell_order_in_btc
+            sell_order_list.append(total_sell_orders)
+        
+        return {'total_buy_orders': total_buy_orders,
+                'total_sell_orders': total_sell_orders,
+                'buy_orders': buy_order_list,
+                'sell_orders': sell_order_list,
+                'buy_order_slope': get_score(buy_order_list),
+                'sell_order_slope': get_score(sell_order_list)}
+    
     # all = True for all coins, all = ['ETH', 'VRM', ..] for specific coins
     # loop = 0 for a infinite loop, loop = 5 for 5 loops
     # sleep = 60 for a 60 second sleep time between two requests
@@ -76,14 +116,15 @@ class Bittrex(object):
 
                 for coin in coinlist:
                     coin     = coin.upper()
-                    filepath = '{}{}_data.csv'.format(folder, coin)
+                    filepath = '{}{}_analysis.csv'.format(folder, coin)
 
                     if not os.path.isfile(filepath):
 
                         f = open(filepath, 'w')
-                        f.write('{},{},{},{},{},{},{},{},{},{},{},{}\n'.format(
+                        f.write('{},{},{},{},{},{},{},{},{},{},{},{},{},{}\n'.format(
                             "timestamp", "tick", "ask", "bid", "vol", "buys", 
-                            "sells", "btc_tick", "btc_buys", "btc_sells", "btc_vol", "usdt"))
+                            "sells", "btc_tick", "btc_buys", "btc_sells", "btc_vol", "usdt",
+                            "first_page_buy_orders", "first_page_sell_orders"))
 
                     for i in loop:
                         f = open(filepath, 'a')
@@ -104,13 +145,25 @@ class Bittrex(object):
                         btc_vol      = btc_market['Volume']
 
                         usdt         = tick * btc_tick
+                        
+                        try:
+                            order_book   = self.orderbook_analysis(coin)
+                            first_page_buy_orders = order_book['total_buy_orders']
+                            first_page_sell_orders = order_book['total_sell_orders']
+                        except:
+                            first_page_buy_orders = 0
+                            first_page_sell_orders = 0
+                        
 
-                        f.write('{},{},{},{},{},{},{},{},{},{},{},{}\n'.format(
-                            timestamp, tick, ask, bid, vol, buys, sells, btc_tick, btc_buys, btc_sells, btc_vol, usdt))
+                        f.write('{},{},{},{},{},{},{},{},{},{},{},{},{},{}\n'.format(
+                            timestamp, tick, ask, bid, vol, buys, 
+                            sells, btc_tick, btc_buys, btc_sells, btc_vol, 
+                            usdt, first_page_buy_orders, first_page_sell_orders))
 
                         f.close()
                         time.sleep(sleep)
-            except:
+            except Exception as e:
+                print(e)
                 time.sleep(30)
     
     def write(self, all=True, loop=0, sleep=60, folder=''):
@@ -157,8 +210,8 @@ class Bittrex(object):
             plt.show()
             
             time.sleep(sleep)
-    def plot_file(self, c='vrm', path='data/'):
-        data = read_csv('{}{}_data.csv'.format(path,c.upper()), header=0, index_col=0)
+    def plot_file(self, c='vrm', path='cryptoAnalysis/'):
+        data = read_csv('{}{}_analysis.csv'.format(path,c.upper()), header=0, index_col=0)
         headers       = [i for i in data.axes[1]]
         data = data.values
         
@@ -176,6 +229,7 @@ class Bittrex(object):
         plotit.line(x, data[:,2], legend='bid', line_width=1, line_color='green')
 
         show(plotit)
+    
 
 crypto = Bittrex()
 crypto.write(all=True, loop=0, sleep=60, folder='data/')
