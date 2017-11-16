@@ -10,8 +10,6 @@ output_notebook()
 output_file("prediction.html", title="prediction")
 
 class Bittrex(object):
-    # key    : e9f3444bbaf34432bdfc9d75305aa03e 
-    # secret : e3138089503b4a3fb53592de439f5646 
     def __init__(self, auth_info=None):
         self.key    = auth_info and auth_info['key']
         self.secret = auth_info and auth_info['secret']
