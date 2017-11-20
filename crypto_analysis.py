@@ -1,3 +1,5 @@
+#!/usr/bin/env python3.6
+
 import requests, json, time, hmac, hashlib
 from matplotlib import pyplot as plt
 import multiprocessing
