@@ -1,4 +1,4 @@
-#!/usr/bin/env python3.6
+#!/usr/bin/env python
 
 import subprocess
 import signal
@@ -7,14 +7,14 @@ import time
 
 while True:
     devnull = open('/dev/null', 'w')
-    p = subprocess.Popen(["./analysis.py"], stdout=devnull, shell=False)
+    p = subprocess.Popen(["./active_analysis.py"], stdout=devnull, shell=False)
     
     print("process {} started!".format(p.pid))
 
-    time.sleep(300)
+    time.sleep(600)
 
     # Get the process id
     os.kill(p.pid, signal.SIGINT)
+    os.system("killall python3.6")
 
-    if not p.poll():
-        print("Process correctly halted")
+    time.sleep(30)

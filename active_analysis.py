@@ -279,5 +279,5 @@ class Bittrex(object):
         show(grid)
         
         
-#crypto = Bittrex()
-#crypto.write(all=True, loop=0, sleep=60, folder='data/') # will write to a data folder!! opens ~200 threads!!!
+crypto = Bittrex()
+crypto.write(all=True, loop=0, sleep=30, folder='data/') # will write to a data folder!! opens ~200 threads!!!
